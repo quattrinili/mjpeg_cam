@@ -9,8 +9,12 @@ find_package(catkin REQUIRED
              COMPONENTS
              roscpp
              sensor_msgs
+             camera_info_manager
+             cv_bridge
              dynamic_reconfigure
              )
+
+find_package(OpenCV REQUIRED)
 
 ###################################
 ## catkin specific configuration ##
@@ -48,6 +52,8 @@ catkin_package(
 include_directories(
         include
         ${catkin_INCLUDE_DIRS}
+        ${OpenCV_INCLUDE_DIRS}
+
 )
 
 ## Declare a cpp library
@@ -68,11 +74,13 @@ add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_gencfg)
 ## Specify libraries to link executable targets against
 target_link_libraries(${PROJECT_NAME}_core
                       ${catkin_LIBRARIES}
+                      ${OpenCV_LIBS}
                       )
 
 target_link_libraries(${PROJECT_NAME}
                       ${PROJECT_NAME}_core
                       ${catkin_LIBRARIES}
+                      ${OpenCV_LIBS}
 
                 )
 

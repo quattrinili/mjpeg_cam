@@ -1,4 +1,6 @@
 #include "mjpeg_cam/MjpegCam.hpp"
+#include <opencv2/core/mat.hpp>
+#include <opencv2/imgcodecs.hpp>
 
 namespace mjpeg_cam
 {
@@ -16,7 +18,12 @@ MjpegCam::MjpegCam(ros::NodeHandle &nodeHandle)
       sequence(0)
 {
     readParameters();
-    imagePub_ = nodeHandle_.advertise<sensor_msgs::CompressedImage>("image/compressed", 1);
+    imagePub_ = nodeHandle_.advertise<sensor_msgs::CompressedImage>(camera_name + "/image_raw/compressed", 1);
+    imageRawPub_ = nodeHandle_.advertise<sensor_msgs::Image>(camera_name + "/image_raw", 1);
+
+    cinfoManager_ = new camera_info_manager::CameraInfoManager(nodeHandle, camera_name, camera_info_url);
+
+    cameraInfoPub_ = nodeHandle_.advertise<sensor_msgs::CameraInfo>(camera_name + "/camera_info", 1);
 
     cam = new UsbCamera(device_name, width, height);
 
@@ -33,6 +40,7 @@ MjpegCam::MjpegCam(ros::NodeHandle &nodeHandle)
 MjpegCam::~MjpegCam()
 {
     delete cam;
+    delete cinfoManager_;
 }
 
 bool MjpegCam::readAndPublishImage()
@@ -41,14 +49,23 @@ bool MjpegCam::readAndPublishImage()
         int length;
         char *image = cam->grab_image(length);
         sensor_msgs::CompressedImage msg;
-        msg.header.frame_id = "usb_cam";
+        msg.header.frame_id = camera_name;
         msg.header.seq = sequence++;
         msg.header.stamp = ros::Time::now();
-        msg.format = "jpeg";
+        msg.format = "bgr8";
         msg.data.resize(length);
         std::copy(image, image + length, msg.data.begin());
+        cv::Mat decompressed_image = cv::imdecode(cv::Mat(msg.data), cv::IMREAD_UNCHANGED);
+        sensor_msgs::ImagePtr image_msg = cv_bridge::CvImage(msg.header, msg.format, decompressed_image).toImageMsg();
+
+        imageRawPub_.publish(image_msg);
         imagePub_.publish(msg);
         //std::cout << "Image size in kB: " << length/1000 << std::endl;
+
+        sensor_msgs::CameraInfo camera_info_msg = cinfoManager_->getCameraInfo();
+        camera_info_msg.header.seq = msg.header.seq;
+        camera_info_msg.header.stamp = msg.header.stamp; // Set timestamp
+        cameraInfoPub_.publish(camera_info_msg);
 
         return true;
     }
@@ -73,6 +90,9 @@ void MjpegCam::spin()
 void MjpegCam::readParameters()
 {
     nodeHandle_.param("device_name", device_name, std::string("/dev/video0"));
+    nodeHandle_.param("camera_name", camera_name, std::string("usb_cam"));
+    nodeHandle_.param("camera_info_url", camera_info_url, std::string(""));
+    nodeHandle_.param("width", width, 640);
     nodeHandle_.param("width", width, 640);
     nodeHandle_.param("height", height, 480);
     nodeHandle_.param("framerate", framerate, 30);

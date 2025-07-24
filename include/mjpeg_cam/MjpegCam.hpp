@@ -8,6 +8,10 @@
 #include <sensor_msgs/Temperature.h>
 #include <std_srvs/Trigger.h>
 #include <sensor_msgs/CompressedImage.h>
+#include <sensor_msgs/Image.h>
+#include <sensor_msgs/CameraInfo.h>
+#include <camera_info_manager/camera_info_manager.h>
+#include <cv_bridge/cv_bridge.h>
 
 
 namespace mjpeg_cam
@@ -61,6 +65,11 @@ private:
 
     //! ROS Image Publisher
     ros::Publisher imagePub_;
+    ros::Publisher imageRawPub_;
+
+    //! Camera info publisher
+    ros::Publisher cameraInfoPub_;
+    camera_info_manager::CameraInfoManager* cinfoManager_;
 
     //! Camera Object
     UsbCamera *cam;
@@ -68,6 +77,8 @@ private:
 
     // Parameters
     std::string device_name;
+    std::string camera_name;
+    std::string camera_info_url;
     int width;
     int height;
     int framerate;
