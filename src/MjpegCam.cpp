@@ -55,10 +55,12 @@ bool MjpegCam::readAndPublishImage()
         msg.format = "bgr8";
         msg.data.resize(length);
         std::copy(image, image + length, msg.data.begin());
-        cv::Mat decompressed_image = cv::imdecode(cv::Mat(msg.data), cv::IMREAD_UNCHANGED);
-        sensor_msgs::ImagePtr image_msg = cv_bridge::CvImage(msg.header, msg.format, decompressed_image).toImageMsg();
+        if (publish_image_raw) {
+            cv::Mat decompressed_image = cv::imdecode(cv::Mat(msg.data), cv::IMREAD_UNCHANGED);
+            sensor_msgs::ImagePtr image_msg = cv_bridge::CvImage(msg.header, msg.format, decompressed_image).toImageMsg();
 
-        imageRawPub_.publish(image_msg);
+            imageRawPub_.publish(image_msg);
+        }
         imagePub_.publish(msg);
         //std::cout << "Image size in kB: " << length/1000 << std::endl;
 
@@ -96,6 +98,7 @@ void MjpegCam::readParameters()
     nodeHandle_.param("width", width, 640);
     nodeHandle_.param("height", height, 480);
     nodeHandle_.param("framerate", framerate, 30);
+    nodeHandle_.param("publish_image_raw", publish_image_raw, false);
 
     nodeHandle_.param("exposure", exposure, 128);
     nodeHandle_.param("autoexposure", autoexposure, true);

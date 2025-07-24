@@ -82,6 +82,7 @@ private:
     int width;
     int height;
     int framerate;
+    bool publish_image_raw;
     int exposure;
     int brightness;
     bool autoexposure;
