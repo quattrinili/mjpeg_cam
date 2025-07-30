@@ -18,12 +18,12 @@ MjpegCam::MjpegCam(ros::NodeHandle &nodeHandle)
       sequence(0)
 {
     readParameters();
-    imagePub_ = nodeHandle_.advertise<sensor_msgs::CompressedImage>(camera_name + "/image_raw/compressed", 1);
-    imageRawPub_ = nodeHandle_.advertise<sensor_msgs::Image>(camera_name + "/image_raw", 1);
+    imagePub_ = nodeHandle_.advertise<sensor_msgs::CompressedImage>("image_raw/compressed", 1);
+    imageRawPub_ = nodeHandle_.advertise<sensor_msgs::Image>("image_raw", 1);
 
     cinfoManager_ = new camera_info_manager::CameraInfoManager(nodeHandle, camera_name, camera_info_url);
 
-    cameraInfoPub_ = nodeHandle_.advertise<sensor_msgs::CameraInfo>(camera_name + "/camera_info", 1);
+    cameraInfoPub_ = nodeHandle_.advertise<sensor_msgs::CameraInfo>("camera_info", 1);
 
     cam = new UsbCamera(device_name, width, height);
 
