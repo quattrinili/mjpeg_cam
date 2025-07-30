@@ -17,4 +17,9 @@
   <depend>dynamic_reconfigure</depend>
   <depend>libv4l-dev</depend>
   <depend>v4l-utils</depend>
+  <depend>nodelet</depend>
+  <depend>pluginlib</depend>
+  <export>
+    <nodelet plugin="${prefix}/nodelet_plugins.xml" />
+  </export>
 </package>

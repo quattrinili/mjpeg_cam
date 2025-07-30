@@ -1,0 +1,9 @@
+<library path="lib/libmjpeg_cam_mjpegcam">
+  <class name="mjpeg_cam/MjpegCam"
+         type="mjpeg_cam::MjpegCam"
+         base_class_type="nodelet::Nodelet">
+    <description>
+        This nodelet is a camera driver.
+    </description>
+  </class>
+</library>

@@ -1,6 +1,9 @@
 #include "mjpeg_cam/MjpegCam.hpp"
 #include <opencv2/core/mat.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include <pluginlib/class_list_macros.hpp>
+
+PLUGINLIB_EXPORT_CLASS(mjpeg_cam::MjpegCam, nodelet::Nodelet);
 
 namespace mjpeg_cam
 {
@@ -13,17 +16,18 @@ void clamp(int &val, int min, int max)
         val = max;
 }
 
-MjpegCam::MjpegCam(ros::NodeHandle &nodeHandle)
-    : nodeHandle_(nodeHandle),
-      sequence(0)
+void MjpegCam::onInit()
 {
-    readParameters();
-    imagePub_ = nodeHandle_.advertise<sensor_msgs::CompressedImage>("image_raw/compressed", 1);
-    imageRawPub_ = nodeHandle_.advertise<sensor_msgs::Image>("image_raw", 1);
+    sequence = 0;
+    ros::NodeHandle &nodeHandle = getPrivateNodeHandle();//getNodeHandle();
+
+    readParameters(nodeHandle);
+    imagePub_ = nodeHandle.advertise<sensor_msgs::CompressedImage>("image_raw/compressed", 1);
+    imageRawPub_ = nodeHandle.advertise<sensor_msgs::Image>("image_raw", 1);
 
     cinfoManager_ = new camera_info_manager::CameraInfoManager(nodeHandle, camera_name, camera_info_url);
 
-    cameraInfoPub_ = nodeHandle_.advertise<sensor_msgs::CameraInfo>("camera_info", 1);
+    cameraInfoPub_ = nodeHandle.advertise<sensor_msgs::CameraInfo>("camera_info", 1);
 
     cam = new UsbCamera(device_name, width, height);
 
@@ -33,6 +37,13 @@ MjpegCam::MjpegCam(ros::NodeHandle &nodeHandle)
     catch (const char * e){
         std::cout << e << std::endl;
     }
+    
+   
+    //cb = boost::bind(&MjpegCam::dynamic_reconfigure_cb, _1, _2);
+    server_.setCallback(cb);
+
+    timer_ = nodeHandle.createTimer(ros::Duration(1.0/framerate), boost::bind(&MjpegCam::spin, this, _1));
+
 
     ROS_INFO("Successfully launched node.");
 }
@@ -77,32 +88,26 @@ bool MjpegCam::readAndPublishImage()
 
     return false;
 }
-void MjpegCam::spin()
+void MjpegCam::spin(const ros::TimerEvent& event)
 {
-    ros::Rate loop_rate(framerate);
-    while (nodeHandle_.ok()) {
-        if (!readAndPublishImage())
-            ROS_WARN("Could not publish image");
-
-        loop_rate.sleep();
-        ros::spinOnce();
-    }
+    if (!readAndPublishImage())
+        ROS_WARN("Could not publish image");
 }
 
-void MjpegCam::readParameters()
+void MjpegCam::readParameters(ros::NodeHandle &nodeHandle)
 {
-    nodeHandle_.param("device_name", device_name, std::string("/dev/video0"));
-    nodeHandle_.param("camera_name", camera_name, std::string("usb_cam"));
-    nodeHandle_.param("camera_info_url", camera_info_url, std::string(""));
-    nodeHandle_.param("width", width, 640);
-    nodeHandle_.param("width", width, 640);
-    nodeHandle_.param("height", height, 480);
-    nodeHandle_.param("framerate", framerate, 30);
-    nodeHandle_.param("publish_image_raw", publish_image_raw, false);
+    nodeHandle.param("device_name", device_name, std::string("/dev/video0"));
+    nodeHandle.param("camera_name", camera_name, std::string("usb_cam"));
+    nodeHandle.param("camera_info_url", camera_info_url, std::string(""));
+    nodeHandle.param("width", width, 640);
+    nodeHandle.param("width", width, 640);
+    nodeHandle.param("height", height, 480);
+    nodeHandle.param("framerate", framerate, 30);
+    nodeHandle.param("publish_image_raw", publish_image_raw, false);
 
-    nodeHandle_.param("exposure", exposure, 128);
-    nodeHandle_.param("autoexposure", autoexposure, true);
-    nodeHandle_.param("brightness", brightness, 128);
+    nodeHandle.param("exposure", exposure, 128);
+    nodeHandle.param("autoexposure", autoexposure, true);
+    nodeHandle.param("brightness", brightness, 128);
 }
 
 bool MjpegCam::setCameraParams()
@@ -133,6 +138,15 @@ void MjpegCam::setDynamicParams(int exposure, int brightness, bool autoexposure)
     this->brightness = brightness;
     this->autoexposure = autoexposure;
     setCameraParams();
+}
+
+void MjpegCam::dynamic_reconfigure_cb(mjpeg_cam::mjpeg_camConfig &config, uint32_t level)
+{
+    ROS_INFO("Reconfigure Request: \nExposure: %d \nBrightness: %d \nAutoexposure: %s",
+             config.exposure,
+             config.brightness,
+             config.autoexposure?"True":"False");
+    this->setDynamicParams(config.exposure, config.brightness, config.autoexposure);
 }
 
 } /* namespace */

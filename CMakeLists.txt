@@ -3,6 +3,7 @@ project(mjpeg_cam)
 
 ## Use C++11
 add_definitions(-std=c++11)
+#set(CMAKE_CXX_STANDARD 17)
 
 ## Find catkin macros and libraries
 find_package(catkin REQUIRED
@@ -12,6 +13,8 @@ find_package(catkin REQUIRED
              camera_info_manager
              cv_bridge
              dynamic_reconfigure
+             nodelet
+             pluginlib
              )
 
 find_package(OpenCV REQUIRED)
@@ -38,6 +41,8 @@ catkin_package(
         CATKIN_DEPENDS
         sensor_msgs
         dynamic_reconfigure
+        nodelet
+        pluginlib
         #  DEPENDS
 )
 
@@ -62,10 +67,14 @@ add_library(${PROJECT_NAME}_core
             include/mjpeg_cam/UsbCamera.hpp
             )
 
+add_library(${PROJECT_NAME}_mjpegcam
+            src/MjpegCam.cpp
+            include/mjpeg_cam/MjpegCam.hpp
+            )
+
 ## Declare cpp executables
 add_executable(${PROJECT_NAME}
                src/${PROJECT_NAME}_node.cpp
-               src/MjpegCam.cpp
                include/mjpeg_cam/MjpegCam.hpp
                )
 
@@ -77,8 +86,15 @@ target_link_libraries(${PROJECT_NAME}_core
                       ${OpenCV_LIBS}
                       )
 
+target_link_libraries(${PROJECT_NAME}_mjpegcam
+                      ${PROJECT_NAME}_core
+                      ${catkin_LIBRARIES}
+                      ${OpenCV_LIBS}
+                      )
+
 target_link_libraries(${PROJECT_NAME}
                       ${PROJECT_NAME}_core
+                      ${PROJECT_NAME}_mjpegcam
                       ${catkin_LIBRARIES}
                       ${OpenCV_LIBS}
 
@@ -110,3 +126,8 @@ install(
         DIRECTORY doc
         DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
+
+install(FILES nodelet_plugins.xml
+        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)
+
